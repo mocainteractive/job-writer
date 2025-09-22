@@ -169,4 +169,180 @@ def build_system_prompt(brand_text: Optional[str], tone_opts: list[str], add_bul
     - Paragrafi concisi (2-4 frasi) e/o elenchi per scansionabilità.
     - Evita gergo interno, acronimi non spiegati, superlativi vuoti.
     - Preferisci verbi attivi ("gestirai", "collaborerai", "implementerai").
-    - Aggiungi
+    - Aggiungi una call-to-action breve e chiara.
+
+    Output richiesto in JSON valido con le chiavi:
+    {{
+      "titolo": string,
+      "abstract": string,
+      "responsabilita": [string, ...],
+      "qualifiche": [string, ...],
+      "livelli_studio": [string, ...],
+      "benefit": [string, ...],
+      "dettagli": {{"sede": string, "contratto": string}},
+      "annuncio_completo": string
+    }}
+
+    {brand_section}
+    """)
+
+def build_user_prompt(title: str, descrizione: str, responsabilita: str, qualifiche: str, livelli_studio: str, include_benefits: str, location: str, contract: str) -> str:
+    return textwrap.dedent(f"""
+    Dati di input grezzi del recruiter:
+    - Titolo: {title}
+    - Descrizione generale (bozza):\n{descrizione}
+    - Responsabilità (bozza):\n{responsabilita}
+    - Qualifiche (bozza):\n{qualifiche}
+    - Livelli di studio (bozza):\n{livelli_studio}
+    - Benefit extra (opzionali):\n{include_benefits}
+    - Sede (opzionale): {location}
+    - Contratto (opzionale): {contract}
+
+    Istruzioni: arricchisci e normalizza le informazioni in modo realistico ma senza inventare dettagli non forniti; se una sezione è assente, lascia il campo vuoto o suggerisci placeholder tra parentesi quadre.
+    """)
+
+# -----------------------------
+# OpenAI client
+# -----------------------------
+_client = None
+def get_client():
+    global _client
+    if _client is None:
+        from openai import OpenAI
+        _client = OpenAI(api_key=OPENAI_API_KEY)
+    return _client
+
+def call_openai(system_prompt: str, user_prompt: str) -> Optional[str]:
+    client = get_client()
+    try:
+        resp = client.responses.create(
+            model=DEFAULT_MODEL,
+            temperature=0.3,
+            max_output_tokens=1500,
+            input=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
+        )
+        if hasattr(resp, "output_text") and resp.output_text:
+            return resp.output_text
+        return str(resp)
+    except Exception as e:
+        st.error(f"Errore API: {e}")
+        return None
+
+# -----------------------------
+# Helpers
+# -----------------------------
+def safe_json_loads(txt: str) -> Optional[dict]:
+    if not txt:
+        return None
+    m = re.search(r"\{[\s\S]*\}\s*$", txt)
+    candidate = m.group(0) if m else txt
+    try:
+        return json.loads(candidate)
+    except Exception:
+        try:
+            candidate2 = re.sub(r",(\s*[}\]])", r"\1", candidate)
+            return json.loads(candidate2)
+        except Exception:
+            return None
+
+def render_output(data: dict):
+    st.success("Annuncio generato ✔")
+
+    titolo = data.get("titolo") or "(Titolo mancante)"
+    abstract = data.get("abstract") or ""
+    responsabilita = data.get("responsabilita") or []
+    qualifiche = data.get("qualifiche") or []
+    livelli = data.get("livelli_studio") or []
+    benefit = data.get("benefit") or []
+    dettagli = data.get("dettagli") or {}
+    full = data.get("annuncio_completo") or ""
+
+    st.header(titolo)
+    st.write(abstract)
+
+    cols = st.columns(2)
+    with cols[0]:
+        st.subheader("Responsabilità")
+        for item in responsabilita:
+            st.markdown(f"- {item}")
+        st.subheader("Qualifiche")
+        for item in qualifiche:
+            st.markdown(f"- {item}")
+    with cols[1]:
+        st.subheader("Livelli di studio")
+        for item in livelli:
+            st.markdown(f"- {item}")
+        if benefit:
+            st.subheader("Benefit")
+            for item in benefit:
+                st.markdown(f"- {item}")
+        if dettagli:
+            st.subheader("Dettagli")
+            sede = dettagli.get("sede") or ""
+            contratto = dettagli.get("contratto") or ""
+            st.markdown(f"**Sede:** {sede}")
+            st.markdown(f"**Contratto:** {contratto}")
+
+    st.subheader("Annuncio completo")
+    editable = st.text_area("", value=full, height=400)
+
+    st.download_button(
+        label="⬇️ Scarica .txt",
+        data=editable,
+        file_name=f"annuncio_{re.sub(r'[^a-zA-Z0-9]+', '_', titolo.lower())}.txt",
+        mime="text/plain",
+        use_container_width=True,
+    )
+    md_export = f"# {titolo}\\n\\n{abstract}\\n\\n## Responsabilità\\n" + "\\n".join([f"- {x}" for x in responsabilita]) + "\\n\\n## Qualifiche\\n" + "\\n".join([f"- {x}" for x in qualifiche]) + "\\n\\n## Livelli di studio\\n" + "\\n".join([f"- {x}" for x in livelli])
+    if benefit:
+        md_export += "\\n\\n## Benefit\\n" + "\\n".join([f"- {x}" for x in benefit])
+    if dettagli:
+        md_export += "\\n\\n## Dettagli\\n"
+        if dettagli.get("sede"):
+            md_export += f"- **Sede:** {dettagli['sede']}\\n"
+        if dettagli.get("contratto"):
+            md_export += f"- **Contratto:** {dettagli['contratto']}\\n"
+    md_export += "\\n\\n---\\n\\n" + editable
+
+    st.download_button(
+        label="⬇️ Scarica .md",
+        data=md_export,
+        file_name=f"annuncio_{re.sub(r'[^a-zA-Z0-9]+', '_', titolo.lower())}.md",
+        mime="text/markdown",
+        use_container_width=True,
+    )
+
+# -----------------------------
+# Run
+# -----------------------------
+if submitted:
+    if not title and not any([descrizione, responsabilita, qualifiche, livelli_studio]):
+        st.error("Inserisci almeno il titolo o una bozza di contenuto.")
+    else:
+        with st.spinner("Genero l'annuncio…"):
+            sys_prompt = build_system_prompt(brand_text, tone_opts, add_bullets)
+            user_prompt = build_user_prompt(title, descrizione, responsabilita, qualifiche, livelli_studio, include_benefits, location, contract)
+            raw = call_openai(sys_prompt, user_prompt)
+            if not raw:
+                st.error("Nessuna risposta dal modello.")
+            else:
+                data = safe_json_loads(raw)
+                if not data:
+                    st.warning("La risposta non era JSON valido. Mostro il testo grezzo qui sotto.")
+                    st.text_area("Risposta grezza", value=raw, height=300)
+                else:
+                    dettagli = data.get("dettagli") or {}
+                    if location and not dettagli.get("sede"):
+                        dettagli["sede"] = location
+                    if contract and not dettagli.get("contratto"):
+                        dettagli["contratto"] = contract
+                    data["dettagli"] = dettagli
+                    render_output(data)
+
+st.markdown("""
+---
+**Note privacy e conformità:** non inserire dati personali identificativi nei campi di input. L'app aiuta l'editing; la responsabilità editoriale finale resta al recruiter.
+""")
