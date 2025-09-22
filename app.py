@@ -15,9 +15,7 @@ st.set_page_config(
     layout="wide",
 )
 
-# -----------------------------
 # Custom Randstad-like CSS
-# -----------------------------
 st.markdown("""
 <style>
 body {
@@ -30,37 +28,39 @@ h1, h2, h3, h4 {
     color: #001C54;
 }
 
-/* Contenitore principale compatto */
+/* Pulsante principale */
+.stButton button {
+    background-color: #0057B8;
+    color: white;
+    border-radius: 6px;
+    padding: 0.6em 1.2em;
+    font-size: 1.1em;
+    border: none;
+    font-weight: 600;
+}
+.stButton button:hover {
+    background-color: #004494;
+}
+
+/* Input box */
+.stTextInput > div > div > input,
+.stTextArea > div > textarea {
+    border-radius: 6px;
+    border: 1px solid #d9d9d9;
+    padding: 0.6em;
+    background-color: #ffffff;
+}
+
+/* Container padding */
 .block-container {
-    max-width: 1200px;
-    margin: 0 auto;
+    max-width: 1200px;   /* larghezza massima */
+    margin: 0 auto;     /* centrato */
     padding-top: 2rem;
     padding-bottom: 2rem;
 }
-
-/* Pulsante principale */
-.stButton > button {
-    background-color: #0057B8 !important;
-    color: white !important;
-    border-radius: 6px !important;
-    padding: 0.6em 1.2em !important;
-    font-size: 1.1em !important;
-    font-weight: 600 !important;
-    border: none !important;
-}
-.stButton > button:hover {
-    background-color: #004494 !important;
-}
-
-/* Input box e textarea */
-.stTextInput input, .stTextArea textarea {
-    border-radius: 6px !important;
-    border: 1px solid #d9d9d9 !important;
-    padding: 0.6em !important;
-    background-color: #ffffff !important;
-}
 </style>
 """, unsafe_allow_html=True)
+
 
 # -----------------------------
 # Header con loghi
@@ -88,15 +88,34 @@ OPENAI_API_KEY = st.secrets.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
 if not OPENAI_API_KEY:
     st.warning("⚠️ Imposta la variabile d'ambiente OPENAI_API_KEY o aggiungi st.secrets['OPENAI_API_KEY'].")
 
-language = "Italiano"  # fisso
+# Language fisso
+language = "Italiano"
 
-# -----------------------------
-# Tone of voice Randstad
-# -----------------------------
+# Tone of voice fisso lato backend
 BRAND_VOICE_FALLBACK = """
 siamo randstad, il tuo partner nel mondo del lavoro.
 Siamo la talent company leader al mondo e siamo al tuo fianco per affrontare, insieme, le sfide del mondo del lavoro. #partnerfortalent.
-[...] (testo brand voice intero come da versione precedente) [...]
+Grazie alla nostra profonda conoscenza del mercato del lavoro, aiutiamo i talenti a costruire una carriera professionale rilevante e supportiamo le aziende nella creazione di un team qualificato e diversificato. Grazie all’attività dei nostri professionisti, uniamo le aspettative di chi cerca e di chi offre lavoro creando solidi rapporti di fiducia che definiscono storie, opportunità e prospettive sempre nuove.
+La nostra strategia e i nostri valori guidano la nostra crescita.
+Aspiriamo ad essere la talent company più equa e specializzata al mondo. Ci impegniamo a mantenere una cultura equa, guidata dai valori fondamentali che ci contraddistinguono fin dalla nostra nascita.
+Offriamo servizi complementari e un interlocutore unico per garantire continuità, risposte tempestive e un’approfondita conoscenza. 
+L'uniformità dei nostri processi di selezione e gestione del candidato, comuni in tutto il territorio, ci permettono di reclutare i migliori profili presenti sul mercato.
+La nostra strategia Partner for Talent garantisce ai talenti il supporto mirato che richiedono e ai clienti le competenze specializzate e l'esperienza di cui il loro business ha bisogno.
+I nostri valori fondamentali fungono da bussola per tutti in Randstad, guidando il nostro comportamento e rappresentando il fondamento della nostra cultura. 
+Su questi valori, basiamo il nostro continuo successo e la nostra reputazione di integrità, servizio e professionalità.
+Dobbiamo il nostro successo all’eccellenza del servizio prestato, che offre ben più dei requisiti fondamentali del nostro settore.
+
+Svolgiamo il nostro lavoro in modo corretto ed etico, evitando situazioni che potrebbero creare conflitto di interessi.
+Non mettiamo in atto condotte di corruzione attiva o passiva, né offriamo o accettiamo regali, ospitalità o altre utilità che potrebbero creare un condizionamento indebito o configurarsi come un comportamento inappropriato. 
+Siamo rispettosi. Diamo importanza alle nostre relazioni e trattiamo bene le persone.
+
+Trattiamo gli altri in modo imparziale, con attenzione e rispetto dei diritti umani. Non sono tollerate intimidazioni né molestie di alcun tipo.
+Rispettiamo il diritto alla privacy e assicuriamo che le informazioni riservate siano mantenute tali.
+Non usiamo impropriamente i beni aziendali, inclusi hardware, software, sistemi e banche dati, per fini personali.
+
+Conosciamo e rispettiamo i principi internazionali dei diritti umani, le leggi che governano la nostra attività, le policy interne del Gruppo e le norme a tutela della concorrenza.
+Conosciamo e rispettiamo le leggi sull’insider trading e sull’abuso di mercato.
+Assicuriamo che i nostri archivi vengano creati, usati, conservati e distrutti in conformità alla legge.
 """.strip()
 
 brand_text = BRAND_VOICE_FALLBACK
@@ -134,7 +153,11 @@ with st.form("job_form", clear_on_submit=False):
 # -----------------------------
 def build_system_prompt(brand_text: Optional[str], tone_opts: list[str], add_bullets: bool) -> str:
     tone_flags = ", ".join(tone_opts) if tone_opts else "chiaro, professionale"
-    bullets_rule = "Usa elenchi puntati dove appropriato." if add_bullets else "Evita elenchi puntati se non indispensabili."
+    bullets_rule = (
+        "Usa un mix di testo discorsivo ed elenchi puntati: inizia sempre le sezioni con 2-3 frasi introduttive, poi usa elenchi sintetici solo per responsabilità e requisiti."
+        if add_bullets
+        else "Scrivi solo in forma discorsiva, evita elenchi puntati."
+    )
     brand_section = f"\nContesto tone of voice (estratto sito):\n---\n{brand_text}\n---\n"
 
     return textwrap.dedent(f"""
@@ -150,12 +173,9 @@ def build_system_prompt(brand_text: Optional[str], tone_opts: list[str], add_bul
 
     Linee guida:
     - Titolo breve (max ~70 caratteri), concreto e inclusivo.
-    - Paragrafi concisi (2-4 frasi) e/o elenchi per scansionabilità.
     - Evita gergo interno, acronimi non spiegati, superlativi vuoti.
     - Preferisci verbi attivi ("gestirai", "collaborerai", "implementerai").
     - Aggiungi una call-to-action breve e chiara.
-
-    IMPORTANTE: restituisci solo JSON valido, senza racchiuderlo in ``` né aggiungere testo extra.
 
     Output richiesto in JSON valido con le chiavi:
     {{
@@ -184,8 +204,7 @@ def build_user_prompt(title: str, descrizione: str, responsabilita: str, qualifi
     - Sede (opzionale): {location}
     - Contratto (opzionale): {contract}
 
-    Istruzioni: arricchisci e normalizza le informazioni in modo realistico ma senza inventare dettagli non forniti; 
-    se una sezione è assente, lascia il campo vuoto o suggerisci placeholder tra parentesi quadre.
+    Istruzioni: arricchisci e normalizza le informazioni in modo realistico ma senza inventare dettagli non forniti; se una sezione è assente, lascia il campo vuoto o suggerisci placeholder tra parentesi quadre.
     """)
 
 # -----------------------------
@@ -224,11 +243,6 @@ def call_openai(system_prompt: str, user_prompt: str) -> Optional[str]:
 def safe_json_loads(txt: str) -> Optional[dict]:
     if not txt:
         return None
-
-    # Rimuove eventuali blocchi ```json ... ```
-    txt = re.sub(r"^```[a-zA-Z]*\n?", "", txt.strip())
-    txt = re.sub(r"```$", "", txt.strip())
-
     m = re.search(r"\{[\s\S]*\}\s*$", txt)
     candidate = m.group(0) if m else txt
     try:
@@ -287,19 +301,6 @@ def render_output(data: dict):
         file_name=f"annuncio_{re.sub(r'[^a-zA-Z0-9]+', '_', titolo.lower())}.txt",
         mime="text/plain",
         use_container_width=True,
-    )
-    md_export = f"# {titolo}\\n\\n{abstract}\\n\\n## Responsabilità\\n" + "\\n".join([f"- {x}" for x in responsabilita]) + "\\n\\n## Qualifiche\\n" + "\\n".join([f"- {x}" for x in qualifiche]) + "\\n\\n## Livelli di studio\\n" + "\\n".join([f"- {x}" for x in livelli])
-    if benefit:
-        md_export += "\\n\\n## Benefit\\n" + "\\n".join([f"- {x}" for x in benefit])
-    if dettagli:
-        md_export += "\\n\\n## Dettagli\\n"
-        if dettagli.get("sede"):
-            md_export += f"- **Sede:** {dettagli['sede']}\\n"
-        if dettagli.get("contratto"):
-            md_export += f"- **Contratto:** {dettagli['contratto']}\\n"
-    md_export += "\\n\\n---\\n\\n" + editable,
-
-
     )
 
 # -----------------------------
