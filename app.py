@@ -56,8 +56,6 @@ h1, h2, h3, h4 {
     padding-top: 2rem;
     padding-bottom: 2rem;
 }
-</style>
-""", unsafe_allow_html=True)
 
 /* Contenitore principale più compatto */
 .block-container {
@@ -66,6 +64,10 @@ h1, h2, h3, h4 {
     padding-top: 2rem;
     padding-bottom: 2rem;
 }
+
+</style>
+""", unsafe_allow_html=True)
+
 
 
 # -----------------------------
