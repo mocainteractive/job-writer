@@ -43,7 +43,6 @@ h1,h2,h3,h4 { font-weight:600; color:#001C54; }
 /* chips multiselect */
 .stMultiSelect div[data-baseweb="select"]{ border-radius:6px; border:1px solid #d9d9d9; }
 .small-note { color:#666; font-size:0.9rem; }
-.section-title { margin-top: 1.25rem; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -59,8 +58,8 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.markdown(
-    "Inserisci qui tutte le informazioni relative all'offerta di lavoro. "
-    "L'AI genererà per te i campi pronti da copiare: **DESCRIZIONE GENERALE • RESPONSABILITÀ • QUALIFICHE • LIVELLO DI STUDIO**"
+    "Inserisci qui tutte le informazioni relative all'offerta. "
+    "L'AI genererà i campi pronti da copiare: **DESCRIZIONE GENERALE • RESPONSABILITÀ • QUALIFICHE • LIVELLO DI STUDIO**"
 )
 
 # =============================
@@ -81,14 +80,14 @@ Operiamo in modo etico, nel rispetto delle leggi, dei diritti umani, della priva
 """.strip()
 
 # =============================
-# Form (input minimo, niente ripetizioni)
+# Form (input minimo, etichetta nascosta)
 # =============================
 with st.form("single_input_form", clear_on_submit=False):
     raw_blob = st.text_area(
-        label="",  # niente testo
+        label="",  # nessun testo visibile
         height=220,
         placeholder="Incolla qui appunti/email/vecchio annuncio: azienda, sede, responsabilità, requisiti, titoli di studio…",
-        label_visibility="collapsed",  # nasconde anche lo spazio dell'etichetta
+        label_visibility="collapsed",
     )
 
     st.subheader("Preferenze di stile (opzionali)")
@@ -100,7 +99,6 @@ with st.form("single_input_form", clear_on_submit=False):
     st.caption("Le sfumature servono solo a rifinire la resa; i campi di output restano 4 e invariati.")
 
     submitted = st.form_submit_button("🚀 Genera annuncio", use_container_width=True)
-
 
 # =============================
 # Prompt engineering
@@ -156,7 +154,7 @@ def get_client():
 def call_openai(system_prompt: str, user_prompt: str) -> Optional[str]:
     client = get_client()
     try:
-        # Provo a forzare JSON nativo
+        # Preferenza: JSON nativo
         try:
             resp = client.responses.create(
                 model=DEFAULT_MODEL,
@@ -210,7 +208,7 @@ def safe_json_loads(txt: str) -> Optional[dict]:
             return None
 
 # =============================
-# UI render
+# UI render (niente box duplicati)
 # =============================
 def render_output(data: dict):
     st.success("Annuncio generato ✔")
@@ -222,25 +220,28 @@ def render_output(data: dict):
 
     # DESCRIZIONE GENERALE (editabile)
     st.subheader("DESCRIZIONE GENERALE")
-    st.text_area("", value=descrizione_generale, height=220, key="dg", help="Testo discorsivo (3–6 frasi).")
+    st.text_area(
+        "",
+        value=descrizione_generale,
+        height=220,
+        key="dg",
+        help="Testo discorsivo (3–6 frasi)."
+    )
 
-    # RESPONSABILITÀ
+    # RESPONSABILITÀ (solo elenco)
     st.subheader("RESPONSABILITÀ")
     for it in responsabilita:
         st.markdown(f"- {it}")
-    st.text_area("Modifica elenco (uno per riga):", value="\n".join(responsabilita), height=160, key="resp_edit")
 
-    # QUALIFICHE
+    # QUALIFICHE (solo elenco)
     st.subheader("QUALIFICHE")
     for it in qualifiche:
         st.markdown(f"- {it}")
-    st.text_area("Modifica elenco (uno per riga):", value="\n".join(qualifiche), height=160, key="qual_edit")
 
-    # LIVELLO DI STUDIO
+    # LIVELLO DI STUDIO (solo elenco)
     st.subheader("LIVELLO DI STUDIO")
     for it in livello_di_studio:
         st.markdown(f"- {it}")
-    st.text_area("Modifica elenco (uno per riga):", value="\n".join(livello_di_studio), height=120, key="ls_edit")
 
 # =============================
 # Run
