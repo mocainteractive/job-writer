@@ -28,6 +28,7 @@ h1,h2,h3,h4 { font-weight:600; color:#001C54; }
 .stButton > button{
   background:#0057B8 !important; color:#fff !important; border:none !important;
   border-radius:6px !important; padding:.6em 1.2em !important; font-size:1.1em !important; font-weight:600 !important;
+  transition: background-color .2s ease;
 }
 .stButton > button:hover{ background:#004494 !important; }
 /* input */
@@ -93,43 +94,40 @@ with st.form("single_input_form", clear_on_submit=False):
         ["chiaro", "concreto", "inclusivo", "autorevole", "accogliente", "orientato all'azione", "formale", "colloquiale"],
         default=["chiaro", "inclusivo", "concreto"],
     )
-    add_bullets = st.checkbox("Usa elenchi puntati dove utile", value=True)
 
-    submitted = st.form_submit_button("Genera annuncio", use_container_width=True)
+    submitted = st.form_submit_button("🚀 Genera annuncio", use_container_width=True)
 
 # =============================
 # Prompt engineering
 # =============================
-def build_system_prompt(brand_text: str, tone_opts: list[str], add_bullets: bool) -> str:
+def build_system_prompt(brand_text: str, tone_opts: list[str]) -> str:
     tone_flags = ", ".join(tone_opts) if tone_opts else "chiaro, professionale"
-    bullets_rule = (
-        "Usa un mix di testo discorsivo ed elenchi puntati: apri le sezioni con 2-3 frasi discorsive, poi elenchi sintetici solo per responsabilità e requisiti."
-        if add_bullets else
-        "Prediligi testo discorsivo ed evita elenchi puntati salvo casi indispensabili."
-    )
 
     return textwrap.dedent(f"""
     Sei un senior recruiter Randstad. Scrivi in Italiano in modo {tone_flags}, inclusivo e conforme alle buone pratiche HR.
 
-    Compito:
-    - Ricevi una bozza unica disordinata e trasformala in un annuncio professionale.
-    - Estrai e normalizza le seguenti sezioni:
-      * "titolo" (breve, concreto, inclusivo, ~70 caratteri)
-      * "abstract" (panoramica discorsiva 3-5 frasi)
-      * "responsabilita" (max 6-8 bullet sintetici, verbi attivi)
-      * "qualifiche" (max 6-8 bullet essenziali)
-      * "livelli_studio" (array di titoli di studio/certificazioni)
-      * "benefit" (se presenti)
-      * "dettagli" con chiavi "sede" e "contratto" (se deducibili)
-      * "annuncio_completo" (testo pronto, con stile narrativo + elenchi dove serve)
-    - Mantieni fedeltà ai dati forniti, evita di inventare dettagli; inserisci [dato non disponibile] se mancano elementi.
+    Requisiti di stile IMPORTANTI:
+    - **Titolo**: brevissimo e oggettivo, indica **solo la mansione** (esempi: "Macchinista piega-incolla", "Addetto amministrazione fornitori"). Niente slogan o aggettivi superflui.
+    - **Descrizione generale (abstract)**: **solo testo discorsivo** di 3–5 frasi, senza elenchi puntati.
+    - **Responsabilità**: elenchi puntati sintetici (max 6–8), con verbi attivi.
+    - **Qualifiche**: elenchi puntati sintetici (max 6–8), solo requisiti essenziali.
+    - **Livelli di studio**: array con eventuali titoli/qualifiche/certificazioni.
+    - **Benefit**: se presenti.
+    - **CTA**: chiusura breve e chiara.
+    - Evita gergo interno, acronimi non spiegati e superlativi vuoti.
+    - Mantieni fedeltà ai dati forniti; se un elemento manca, usa il placeholder [dato non disponibile].
 
-    Linee guida:
-    - {bullets_rule}
-    - Evita gergo interno, acronimi non spiegati, superlativi vuoti.
-    - Verbi attivi: "gestirai", "collaborerai", "implementerai".
-    - Call-to-action breve e chiara alla fine dell'annuncio.
-    - IMPORTANTE: restituisci SOLO JSON valido, senza ``` e senza testo extra.
+    Output richiesto in **JSON valido** (senza ``` né testo extra) con le chiavi:
+    {{
+      "titolo": string,
+      "abstract": string,                # paragrafo discorsivo
+      "responsabilita": [string, ...],   # bullet sintetici
+      "qualifiche": [string, ...],       # bullet sintetici
+      "livelli_studio": [string, ...],
+      "benefit": [string, ...],
+      "dettagli": {{ "sede": string, "contratto": string }},
+      "annuncio_completo": string        # testo pronto, con mix di narrazione + punti dove serve
+    }}
 
     Contesto tone of voice:
     ---
@@ -143,18 +141,6 @@ def build_user_prompt(raw_blob: str) -> str:
     ---
     {raw_blob}
     ---
-
-    Output richiesto in JSON con le chiavi:
-    {{
-      "titolo": string,
-      "abstract": string,
-      "responsabilita": [string, ...],
-      "qualifiche": [string, ...],
-      "livelli_studio": [string, ...],
-      "benefit": [string, ...],
-      "dettagli": {{"sede": string, "contratto": string}},
-      "annuncio_completo": string
-    }}
     """)
 
 # =============================
@@ -278,7 +264,7 @@ if submitted:
         st.error("Incolla almeno qualche riga nella bozza.")
     else:
         with st.spinner("Genero l'annuncio…"):
-            sys_prompt = build_system_prompt(BRAND_VOICE, tone_opts, add_bullets)
+            sys_prompt = build_system_prompt(BRAND_VOICE, tone_opts)
             user_prompt = build_user_prompt(raw_blob)
             raw = call_openai(sys_prompt, user_prompt)
             if not raw:
