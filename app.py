@@ -6,178 +6,145 @@ from typing import Optional
 
 import streamlit as st
 
-# -----------------------------
+# =============================
 # App Config
-# -----------------------------
+# =============================
 st.set_page_config(
     page_title="Job Assistant",
     page_icon="https://mocainteractive.com/wp-content/uploads/2025/04/cropped-moca-instagram-icona-1.png",
     layout="wide",
 )
 
-# Custom Randstad-like CSS
+# =============================
+# CSS (look & feel Randstad)
+# =============================
 st.markdown("""
 <style>
-body {
-    background-color: #F7F7F7;
-    font-family: "Open Sans", sans-serif;
+body { background-color:#F7F7F7; font-family:"Open Sans",sans-serif; }
+h1,h2,h3,h4 { font-weight:600; color:#001C54; }
+/* container più compatto */
+.block-container { max-width:1200px; margin:0 auto; padding:2rem 0; }
+/* pulsanti */
+.stButton > button{
+  background:#0057B8 !important; color:#fff !important; border:none !important;
+  border-radius:6px !important; padding:.6em 1.2em !important; font-size:1.1em !important; font-weight:600 !important;
 }
-
-h1, h2, h3, h4 {
-    font-weight: 600;
-    color: #001C54;
+.stButton > button:hover{ background:#004494 !important; }
+/* input */
+.stTextArea textarea, .stTextInput input{
+  border-radius:4px !important; border:1px solid #d9d9d9 !important; padding:.6em !important; background:#fff !important;
+  transition:border-color .2s ease, box-shadow .2s ease;
 }
-
-/* Pulsante principale */
-.stButton button {
-    background-color: #0057B8;
-    color: white;
-    border-radius: 6px;
-    padding: 0.6em 1.2em;
-    font-size: 1.1em;
-    border: none;
-    font-weight: 600;
+.stTextArea textarea:hover, .stTextInput input:hover{ border-color:#bfbfbf !important; }
+.stTextArea textarea:focus, .stTextInput input:focus{
+  border-color:#0057B8 !important; box-shadow:0 0 0 1px #0057B8 !important; outline:none !important;
 }
-.stButton button:hover {
-    background-color: #004494;
-}
-
-/* Input box */
-.stTextInput > div > div > input,
-.stTextArea > div > textarea {
-    border-radius: 6px;
-    border: 1px solid #d9d9d9;
-    padding: 0.6em;
-    background-color: #ffffff;
-}
-
-/* Container padding */
-.block-container {
-    max-width: 1200px;   /* larghezza massima */
-    margin: 0 auto;     /* centrato */
-    padding-top: 2rem;
-    padding-bottom: 2rem;
-}
+/* chips multiselect */
+.stMultiSelect div[data-baseweb="select"]{ border-radius:6px; border:1px solid #d9d9d9; }
 </style>
 """, unsafe_allow_html=True)
 
-
-# -----------------------------
-# Header con loghi
-# -----------------------------
+# =============================
+# Header
+# =============================
 st.markdown("""
-<div style="display:flex; align-items:center; justify-content:center; gap:40px; margin-bottom:20px;">
+<div style="display:flex;align-items:center;justify-content:center;gap:40px;margin-bottom:20px;">
   <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/10/Randstad_Logo.svg/2560px-Randstad_Logo.svg.png" alt="Randstad" style="height:40px;">
-  <h1 style="margin:0; font-size:2.2em;">Job Assistant</h1>
+  <h1 style="margin:0;font-size:2.2em;">Job Assistant</h1>
   <img src="https://mocainteractive.com/wp-content/uploads/2025/04/cropped-moca_logo-positivo-1.png" alt="Moca" style="height:40px;">
 </div>
 """, unsafe_allow_html=True)
 
 st.markdown("""
-Scrivi una bozza veloce, ci penso io a sistemarla secondo il **tone of voice Randstad**.
-
-**Come funziona:** inserisci *Titolo annuncio* + 4 campi (Descrizione generale, Responsabilità, Qualifiche, Livelli di studio),
-poi clicca **Genera annuncio**. L'AI produrrà testo pulito, coerente e professionale.
+Incolla una **bozza unica** (anche disordinata). L'AI la divide e rifinisce in **Titolo**, **Descrizione generale**, **Responsabilità**, **Qualifiche**, **Livelli di studio** e un **annuncio completo** già pronto, coerente con il *tone of voice Randstad*.
 """)
 
-# -----------------------------
-# Secrets & Config
-# -----------------------------
+# =============================
+# Config & brand voice
+# =============================
 DEFAULT_MODEL = "gpt-4o-mini"
 OPENAI_API_KEY = st.secrets.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
 if not OPENAI_API_KEY:
-    st.warning("⚠️ Imposta la variabile d'ambiente OPENAI_API_KEY o aggiungi st.secrets['OPENAI_API_KEY'].")
+    st.warning("⚠️ Imposta OPENAI_API_KEY in Secrets o come variabile d’ambiente.")
 
-# Language fisso
-language = "Italiano"
-
-# Tone of voice fisso lato backend
-BRAND_VOICE_FALLBACK = """
+BRAND_VOICE = """
 siamo randstad, il tuo partner nel mondo del lavoro.
 Siamo la talent company leader al mondo e siamo al tuo fianco per affrontare, insieme, le sfide del mondo del lavoro. #partnerfortalent.
-Grazie alla nostra profonda conoscenza del mercato del lavoro, aiutiamo i talenti a costruire una carriera professionale rilevante e supportiamo le aziende nella creazione di un team qualificato e diversificato. Grazie all’attività dei nostri professionisti, uniamo le aspettative di chi cerca e di chi offre lavoro creando solidi rapporti di fiducia che definiscono storie, opportunità e prospettive sempre nuove.
-La nostra strategia e i nostri valori guidano la nostra crescita.
-Aspiriamo ad essere la talent company più equa e specializzata al mondo. Ci impegniamo a mantenere una cultura equa, guidata dai valori fondamentali che ci contraddistinguono fin dalla nostra nascita.
-Offriamo servizi complementari e un interlocutore unico per garantire continuità, risposte tempestive e un’approfondita conoscenza. 
-L'uniformità dei nostri processi di selezione e gestione del candidato, comuni in tutto il territorio, ci permettono di reclutare i migliori profili presenti sul mercato.
-La nostra strategia Partner for Talent garantisce ai talenti il supporto mirato che richiedono e ai clienti le competenze specializzate e l'esperienza di cui il loro business ha bisogno.
-I nostri valori fondamentali fungono da bussola per tutti in Randstad, guidando il nostro comportamento e rappresentando il fondamento della nostra cultura. 
-Su questi valori, basiamo il nostro continuo successo e la nostra reputazione di integrità, servizio e professionalità.
-Dobbiamo il nostro successo all’eccellenza del servizio prestato, che offre ben più dei requisiti fondamentali del nostro settore.
-
-Svolgiamo il nostro lavoro in modo corretto ed etico, evitando situazioni che potrebbero creare conflitto di interessi.
-Non mettiamo in atto condotte di corruzione attiva o passiva, né offriamo o accettiamo regali, ospitalità o altre utilità che potrebbero creare un condizionamento indebito o configurarsi come un comportamento inappropriato. 
-Siamo rispettosi. Diamo importanza alle nostre relazioni e trattiamo bene le persone.
-
-Trattiamo gli altri in modo imparziale, con attenzione e rispetto dei diritti umani. Non sono tollerate intimidazioni né molestie di alcun tipo.
-Rispettiamo il diritto alla privacy e assicuriamo che le informazioni riservate siano mantenute tali.
-Non usiamo impropriamente i beni aziendali, inclusi hardware, software, sistemi e banche dati, per fini personali.
-
-Conosciamo e rispettiamo i principi internazionali dei diritti umani, le leggi che governano la nostra attività, le policy interne del Gruppo e le norme a tutela della concorrenza.
-Conosciamo e rispettiamo le leggi sull’insider trading e sull’abuso di mercato.
-Assicuriamo che i nostri archivi vengano creati, usati, conservati e distrutti in conformità alla legge.
+Grazie alla nostra profonda conoscenza del mercato del lavoro, aiutiamo i talenti a costruire una carriera professionale rilevante e supportiamo le aziende nella creazione di un team qualificato e diversificato.
+La nostra strategia e i nostri valori guidano la nostra crescita: cultura equa, integrità, servizio e professionalità.
+Offriamo servizi complementari, processi uniformi sul territorio e selezioniamo i migliori profili presenti sul mercato.
+Operiamo in modo etico, nel rispetto delle leggi, dei diritti umani, della privacy e delle norme a tutela della concorrenza; non sono tollerati comportamenti scorretti o discriminatori.
 """.strip()
 
-brand_text = BRAND_VOICE_FALLBACK
+# =============================
+# Form (un solo campo)
+# =============================
+with st.form("single_input_form", clear_on_submit=False):
+    st.subheader("Bozza unica")
+    raw_blob = st.text_area(
+        "Incolla qui qualsiasi informazione sul ruolo (azienda, sede, responsabilità, requisiti, studi, benefit...). Anche in forma libera.",
+        height=220,
+        placeholder="Esempio: stiamo cercando un macchinista piega-incolla per azienda packaging a Bottanuco (BG)..."
+    )
 
-# -----------------------------
-# Input form
-# -----------------------------
-with st.form("job_form", clear_on_submit=False):
-    st.subheader("1) Dati annuncio")
-    title = st.text_input("Titolo annuncio", placeholder="Es. Addetto/a amministrazione fornitori")
-
-    col1, col2 = st.columns(2)
-    with col1:
-        descrizione = st.text_area("Descrizione generale (bozza)", height=180, placeholder="Scrivi in libertà: contesto dell'azienda, sede, finalità del ruolo…")
-        responsabilita = st.text_area("Responsabilità (bozza)", height=220, placeholder="Elenca le attività principali, anche in forma grezza…")
-    with col2:
-        qualifiche = st.text_area("Qualifiche (bozza)", height=220, placeholder="Competenze hard/soft, anni di esperienza, lingue, tool…")
-        livelli_studio = st.text_area("Livelli di studio (bozza)", height=120, placeholder="Diploma/laurea, indirizzo, certificazioni…")
-
-    st.subheader("2) Preferenze di stile (opzionali)")
+    st.subheader("Preferenze di stile (opzionali)")
     tone_opts = st.multiselect(
-        "Aggiungi sfumature di tono",
+        "Sfumature di tono",
         ["chiaro", "concreto", "inclusivo", "autorevole", "accogliente", "orientato all'azione", "formale", "colloquiale"],
         default=["chiaro", "inclusivo", "concreto"],
     )
     add_bullets = st.checkbox("Usa elenchi puntati dove utile", value=True)
-    include_benefits = st.text_area("Vantaggi/benefit (opzionale)", placeholder="Ticket, welfare, formazione, smart working…")
-    location = st.text_input("Sede (opzionale)")
-    contract = st.text_input("Contratto (opzionale)", placeholder="es. Tempo indeterminato, CCNL Metalmeccanico…")
 
     submitted = st.form_submit_button("Genera annuncio", use_container_width=True)
 
-# -----------------------------
+# =============================
 # Prompt engineering
-# -----------------------------
-def build_system_prompt(brand_text: Optional[str], tone_opts: list[str], add_bullets: bool) -> str:
+# =============================
+def build_system_prompt(brand_text: str, tone_opts: list[str], add_bullets: bool) -> str:
     tone_flags = ", ".join(tone_opts) if tone_opts else "chiaro, professionale"
     bullets_rule = (
-        "Usa un mix di testo discorsivo ed elenchi puntati: inizia sempre le sezioni con 2-3 frasi introduttive, poi usa elenchi sintetici solo per responsabilità e requisiti."
-        if add_bullets
-        else "Scrivi solo in forma discorsiva, evita elenchi puntati."
+        "Usa un mix di testo discorsivo ed elenchi puntati: apri le sezioni con 2-3 frasi discorsive, poi elenchi sintetici solo per responsabilità e requisiti."
+        if add_bullets else
+        "Prediligi testo discorsivo ed evita elenchi puntati salvo casi indispensabili."
     )
-    brand_section = f"\nContesto tone of voice (estratto sito):\n---\n{brand_text}\n---\n"
 
     return textwrap.dedent(f"""
-    Sei un senior recruiter Randstad che redige annunci impeccabili in Italiano. Scrivi in modo {tone_flags}, inclusivo e conforme alle buone pratiche HR italiane.
+    Sei un senior recruiter Randstad. Scrivi in Italiano in modo {tone_flags}, inclusivo e conforme alle buone pratiche HR.
 
-    Obiettivi:
-    - Migliorare chiarezza, impatto e leggibilità.
-    - Uniformare stile e terminologia al tone of voice del brand.
-    - Correggere errori, ridondanze e ambiguità, mantenendo la veridicità delle informazioni.
-    - Evitare qualsiasi discriminazione (età, genere, etnia, orientamento, stato civile, ecc.).
-    - Evidenziare elementi chiave: responsabilità, requisiti, crescita, benefit, luogo e contratto se presenti.
-    {bullets_rule}
+    Compito:
+    - Ricevi una bozza unica disordinata e trasformala in un annuncio professionale.
+    - Estrai e normalizza le seguenti sezioni:
+      * "titolo" (breve, concreto, inclusivo, ~70 caratteri)
+      * "abstract" (panoramica discorsiva 3-5 frasi)
+      * "responsabilita" (max 6-8 bullet sintetici, verbi attivi)
+      * "qualifiche" (max 6-8 bullet essenziali)
+      * "livelli_studio" (array di titoli di studio/certificazioni)
+      * "benefit" (se presenti)
+      * "dettagli" con chiavi "sede" e "contratto" (se deducibili)
+      * "annuncio_completo" (testo pronto, con stile narrativo + elenchi dove serve)
+    - Mantieni fedeltà ai dati forniti, evita di inventare dettagli; inserisci [dato non disponibile] se mancano elementi.
 
     Linee guida:
-    - Titolo breve (max ~70 caratteri), concreto e inclusivo.
+    - {bullets_rule}
     - Evita gergo interno, acronimi non spiegati, superlativi vuoti.
-    - Preferisci verbi attivi ("gestirai", "collaborerai", "implementerai").
-    - Aggiungi una call-to-action breve e chiara.
+    - Verbi attivi: "gestirai", "collaborerai", "implementerai".
+    - Call-to-action breve e chiara alla fine dell'annuncio.
+    - IMPORTANTE: restituisci SOLO JSON valido, senza ``` e senza testo extra.
 
-    Output richiesto in JSON valido con le chiavi:
+    Contesto tone of voice:
+    ---
+    {brand_text}
+    ---
+    """)
+
+def build_user_prompt(raw_blob: str) -> str:
+    return textwrap.dedent(f"""
+    Bozza unica fornita dal recruiter (grezza, da ripulire e strutturare):
+    ---
+    {raw_blob}
+    ---
+
+    Output richiesto in JSON con le chiavi:
     {{
       "titolo": string,
       "abstract": string,
@@ -188,28 +155,11 @@ def build_system_prompt(brand_text: Optional[str], tone_opts: list[str], add_bul
       "dettagli": {{"sede": string, "contratto": string}},
       "annuncio_completo": string
     }}
-
-    {brand_section}
     """)
 
-def build_user_prompt(title: str, descrizione: str, responsabilita: str, qualifiche: str, livelli_studio: str, include_benefits: str, location: str, contract: str) -> str:
-    return textwrap.dedent(f"""
-    Dati di input grezzi del recruiter:
-    - Titolo: {title}
-    - Descrizione generale (bozza):\n{descrizione}
-    - Responsabilità (bozza):\n{responsabilita}
-    - Qualifiche (bozza):\n{qualifiche}
-    - Livelli di studio (bozza):\n{livelli_studio}
-    - Benefit extra (opzionali):\n{include_benefits}
-    - Sede (opzionale): {location}
-    - Contratto (opzionale): {contract}
-
-    Istruzioni: arricchisci e normalizza le informazioni in modo realistico ma senza inventare dettagli non forniti; se una sezione è assente, lascia il campo vuoto o suggerisci placeholder tra parentesi quadre.
-    """)
-
-# -----------------------------
-# OpenAI client
-# -----------------------------
+# =============================
+# OpenAI client (una sola chiamata)
+# =============================
 _client = None
 def get_client():
     global _client
@@ -221,15 +171,30 @@ def get_client():
 def call_openai(system_prompt: str, user_prompt: str) -> Optional[str]:
     client = get_client()
     try:
-        resp = client.responses.create(
-            model=DEFAULT_MODEL,
-            temperature=0.3,
-            max_output_tokens=1500,
-            input=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
-        )
+        # Provo a forzare JSON nativo
+        try:
+            resp = client.responses.create(
+                model=DEFAULT_MODEL,
+                temperature=0.3,
+                max_output_tokens=1500,
+                response_format={"type": "json_object"},
+                input=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+            )
+        except Exception:
+            # Fallback se response_format non è supportato
+            resp = client.responses.create(
+                model=DEFAULT_MODEL,
+                temperature=0.3,
+                max_output_tokens=1500,
+                input=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+            )
+
         if hasattr(resp, "output_text") and resp.output_text:
             return resp.output_text
         return str(resp)
@@ -237,14 +202,18 @@ def call_openai(system_prompt: str, user_prompt: str) -> Optional[str]:
         st.error(f"Errore API: {e}")
         return None
 
-# -----------------------------
+# =============================
 # Helpers
-# -----------------------------
+# =============================
 def safe_json_loads(txt: str) -> Optional[dict]:
     if not txt:
         return None
-    m = re.search(r"\{[\s\S]*\}\s*$", txt)
-    candidate = m.group(0) if m else txt
+    s = txt.strip()
+    # rimuove eventuali fence ```json
+    s = re.sub(r"^\s*```(?:json|JSON)?\s*\n", "", s, flags=re.IGNORECASE)
+    s = re.sub(r"\n?\s*```$", "", s)
+    m = re.search(r"\{[\s\S]*\}\s*$", s)
+    candidate = m.group(0) if m else s
     try:
         return json.loads(candidate)
     except Exception:
@@ -269,50 +238,48 @@ def render_output(data: dict):
     st.header(titolo)
     st.write(abstract)
 
-    cols = st.columns(2)
-    with cols[0]:
+    c1, c2 = st.columns(2)
+    with c1:
         st.subheader("Responsabilità")
-        for item in responsabilita:
-            st.markdown(f"- {item}")
+        for it in responsabilita:
+            st.markdown(f"- {it}")
         st.subheader("Qualifiche")
-        for item in qualifiche:
-            st.markdown(f"- {item}")
-    with cols[1]:
+        for it in qualifiche:
+            st.markdown(f"- {it}")
+    with c2:
         st.subheader("Livelli di studio")
-        for item in livelli:
-            st.markdown(f"- {item}")
+        for it in livelli:
+            st.markdown(f"- {it}")
         if benefit:
             st.subheader("Benefit")
-            for item in benefit:
-                st.markdown(f"- {item}")
+            for it in benefit:
+                st.markdown(f"- {it}")
         if dettagli:
             st.subheader("Dettagli")
-            sede = dettagli.get("sede") or ""
-            contratto = dettagli.get("contratto") or ""
-            st.markdown(f"**Sede:** {sede}")
-            st.markdown(f"**Contratto:** {contratto}")
+            st.markdown(f"**Sede:** {dettagli.get('sede','')}")
+            st.markdown(f"**Contratto:** {dettagli.get('contratto','')}")
 
     st.subheader("Annuncio completo")
-    editable = st.text_area("", value=full, height=400)
+    editable = st.text_area("", value=full, height=380)
 
     st.download_button(
         label="⬇️ Scarica .txt",
         data=editable,
-        file_name=f"annuncio_{re.sub(r'[^a-zA-Z0-9]+', '_', titolo.lower())}.txt",
+        file_name=f"annuncio_{re.sub(r'[^a-zA-Z0-9]+','_', titolo.lower())}.txt",
         mime="text/plain",
         use_container_width=True,
     )
 
-# -----------------------------
+# =============================
 # Run
-# -----------------------------
+# =============================
 if submitted:
-    if not title and not any([descrizione, responsabilita, qualifiche, livelli_studio]):
-        st.error("Inserisci almeno il titolo o una bozza di contenuto.")
+    if not raw_blob.strip():
+        st.error("Incolla almeno qualche riga nella bozza.")
     else:
         with st.spinner("Genero l'annuncio…"):
-            sys_prompt = build_system_prompt(brand_text, tone_opts, add_bullets)
-            user_prompt = build_user_prompt(title, descrizione, responsabilita, qualifiche, livelli_studio, include_benefits, location, contract)
+            sys_prompt = build_system_prompt(BRAND_VOICE, tone_opts, add_bullets)
+            user_prompt = build_user_prompt(raw_blob)
             raw = call_openai(sys_prompt, user_prompt)
             if not raw:
                 st.error("Nessuna risposta dal modello.")
@@ -322,15 +289,9 @@ if submitted:
                     st.warning("La risposta non era JSON valido. Mostro il testo grezzo qui sotto.")
                     st.text_area("Risposta grezza", value=raw, height=300)
                 else:
-                    dettagli = data.get("dettagli") or {}
-                    if location and not dettagli.get("sede"):
-                        dettagli["sede"] = location
-                    if contract and not dettagli.get("contratto"):
-                        dettagli["contratto"] = contract
-                    data["dettagli"] = dettagli
                     render_output(data)
 
 st.markdown("""
 ---
-**Note privacy e conformità:** non inserire dati personali identificativi nei campi di input. L'app aiuta l'editing; la responsabilità editoriale finale resta al recruiter.
+**Note privacy e conformità:** non inserire dati personali identificativi nella bozza. L'app aiuta l'editing; la responsabilità editoriale finale resta al recruiter.
 """)
