@@ -6,55 +6,42 @@ from typing import Optional
 
 import streamlit as st
 
-# (Rimosso scraping: il tone of voice arriva da SECRET o fallback)
-
 # -----------------------------
 # App Config
 # -----------------------------
 st.set_page_config(
-    page_title="Randstad Job Ad Assistant",
-    page_icon="📄",
+    page_title="Job Assistant",
+    page_icon="https://mocainteractive.com/wp-content/uploads/2025/04/cropped-moca-instagram-icona-1.png",
     layout="wide",
 )
 
 st.markdown("""
-# 📄 Randstad Job Ad Assistant
+<div style="display:flex; align-items:center; justify-content:center; gap:40px; margin-bottom:20px;">
+  <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/10/Randstad_Logo.svg/2560px-Randstad_Logo.svg.png" alt="Randstad" style="height:40px;">
+  <h1 style="margin:0; font-size:2.2em;">Job Assistant</h1>
+  <img src="https://mocainteractive.com/wp-content/uploads/2025/04/cropped-moca_logo-positivo-1.png" alt="Moca" style="height:40px;">
+</div>
+""", unsafe_allow_html=True)
 
+st.markdown("""
 Scrivi una bozza veloce, ci penso io a sistemarla secondo il **tone of voice Randstad**.
 
 **Come funziona:** inserisci *Titolo annuncio* + 4 campi (Descrizione generale, Responsabilità, Qualifiche, Livelli di studio),
-poi clicca **Rigenera annuncio**. L'AI produrrà testo pulito, coerente e professionale.
+poi clicca **Genera annuncio**. L'AI produrrà testo pulito, coerente e professionale.
 """)
 
 # -----------------------------
-# Secrets & Model
+# Secrets & Config
 # -----------------------------
-DEFAULT_MODEL = st.sidebar.selectbox(
-    "Modello AI",
-    options=[
-        "gpt-4o-mini",
-        "gpt-4o",
-        "gpt-4.1-mini",
-        "gpt-4.1",
-    ],
-    index=0,
-    help="Seleziona il modello OpenAI. Consiglio 'gpt-4o-mini' per velocità/costo." 
-)
-
+DEFAULT_MODEL = "gpt-4o-mini"
 OPENAI_API_KEY = st.secrets.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
 if not OPENAI_API_KEY:
     st.warning("⚠️ Imposta la variabile d'ambiente OPENAI_API_KEY o aggiungi st.secrets['OPENAI_API_KEY'].")
 
-# Temperature & extra options
-col_t1, col_t2 = st.sidebar.columns(2)
-with col_t1:
-    temperature = st.slider("Creatività", 0.0, 1.0, 0.3, 0.1)
-with col_t2:
-    max_tokens = st.number_input("Max token output", min_value=256, max_value=4000, value=1500, step=50)
+# Language fisso
+language = "Italiano"
 
-language = "Italiano"  # fisso: solo IT
-
-# Tone of voice fisso lato backend: via Secret o fallback costante
+# Tone of voice fisso lato backend
 BRAND_VOICE_FALLBACK = """
 siamo randstad, il tuo partner nel mondo del lavoro.
 Siamo la talent company leader al mondo e siamo al tuo fianco per affrontare, insieme, le sfide del mondo del lavoro. #partnerfortalent.
@@ -78,14 +65,7 @@ conosciamo e rispettiamo le leggi sull’insider trading e sull’abuso di merca
 assicuriamo che i nostri archivi (compresi quelli che contengono informazioni personali) vengano creati, usati, conservati e distrutti in conformità alla legge.
 """.strip()
 
-brand_text = None
-try:
-    brand_text = (st.secrets.get("BRAND_VOICE") or "").strip()
-except Exception:
-    brand_text = None
-
-if not brand_text:
-    brand_text = BRAND_VOICE_FALLBACK
+brand_text = BRAND_VOICE_FALLBACK
 
 # -----------------------------
 # Input form
@@ -113,24 +93,19 @@ with st.form("job_form", clear_on_submit=False):
     location = st.text_input("Sede (opzionale)")
     contract = st.text_input("Contratto (opzionale)", placeholder="es. Tempo indeterminato, CCNL Metalmeccanico…")
 
-    submitted = st.form_submit_button("🚀 Rigenera annuncio", use_container_width=True)
+    submitted = st.form_submit_button("🚀 Genera annuncio", use_container_width=True)
 
 # -----------------------------
-# Prompt engineering
+# Prompt engineering, API call e rendering output
 # -----------------------------
-def build_system_prompt(brand_text: Optional[str], language: str, tone_opts: list[str], add_bullets: bool) -> str:
+
+def build_system_prompt(brand_text: Optional[str], tone_opts: list[str], add_bullets: bool) -> str:
     tone_flags = ", ".join(tone_opts) if tone_opts else "chiaro, professionale"
-    bullets_rule = (
-        "Usa elenchi puntati dove appropriato." if add_bullets else "Evita elenchi puntati se non indispensabili."
-    )
-    lang = "Italiano" if language == "Italiano" else "English"
-
-    brand_section = (
-        f"\nContesto tone of voice (estratto sito):\n---\n{brand_text}\n---\n" if brand_text else "\nNota: Se manca il testo brand, mantieni un tono neutro, professionale e coerente con un grande brand HR.\n"
-    )
+    bullets_rule = "Usa elenchi puntati dove appropriato." if add_bullets else "Evita elenchi puntati se non indispensabili."
+    brand_section = f"\nContesto tone of voice (estratto sito):\n---\n{brand_text}\n---\n"
 
     return textwrap.dedent(f"""
-    Sei un senior recruiter Randstad che redige annunci impeccabili in {lang}. Scrivi in modo {tone_flags}, inclusivo e conforme alle buone pratiche HR italiane.
+    Sei un senior recruiter Randstad che redige annunci impeccabili in Italiano. Scrivi in modo {tone_flags}, inclusivo e conforme alle buone pratiche HR italiane.
 
     Obiettivi:
     - Migliorare chiarezza, impatto e leggibilità.
@@ -145,34 +120,25 @@ def build_system_prompt(brand_text: Optional[str], language: str, tone_opts: lis
     - Paragrafi concisi (2-4 frasi) e/o elenchi per scansionabilità.
     - Evita gergo interno, acronimi non spiegati, superlativi vuoti.
     - Preferisci verbi attivi ("gestirai", "collaborerai", "implementerai").
-    - Dove utile, aggiungi una call-to-action breve e chiara.
+    - Aggiungi una call-to-action breve e chiara.
 
     Output richiesto in JSON valido con le chiavi:
     {{
       "titolo": string,
-      "abstract": string,  # panoramica 3-5 frasi
+      "abstract": string,
       "responsabilita": [string, ...],
       "qualifiche": [string, ...],
       "livelli_studio": [string, ...],
-      "benefit": [string, ...],  # può essere vuoto
+      "benefit": [string, ...],
       "dettagli": {{"sede": string, "contratto": string}},
-      "annuncio_completo": string  # testo pronto alla pubblicazione
+      "annuncio_completo": string
     }}
 
     {brand_section}
     """)
 
 
-def build_user_prompt(
-    title: str,
-    descrizione: str,
-    responsabilita: str,
-    qualifiche: str,
-    livelli_studio: str,
-    include_benefits: str,
-    location: str,
-    contract: str,
-) -> str:
+def build_user_prompt(title: str, descrizione: str, responsabilita: str, qualifiche: str, livelli_studio: str, include_benefits: str, location: str, contract: str) -> str:
     return textwrap.dedent(f"""
     Dati di input grezzi del recruiter:
     - Titolo: {title}
@@ -187,79 +153,48 @@ def build_user_prompt(
     Istruzioni: arricchisci e normalizza le informazioni in modo realistico ma senza inventare dettagli non forniti; se una sezione è assente, lascia il campo vuoto o suggerisci placeholder tra parentesi quadre.
     """)
 
-
-# -----------------------------
-# OpenAI client (Responses API)
-# -----------------------------
+# OpenAI client
 _client = None
-
 def get_client():
     global _client
     if _client is None:
-        try:
-            from openai import OpenAI
-            _client = OpenAI(api_key=OPENAI_API_KEY)
-        except Exception as e:
-            st.error(f"Errore inizializzazione OpenAI: {e}")
+        from openai import OpenAI
+        _client = OpenAI(api_key=OPENAI_API_KEY)
     return _client
 
-
-def call_openai(system_prompt: str, user_prompt: str, model: str, temperature: float, max_tokens: int) -> Optional[str]:
+def call_openai(system_prompt: str, user_prompt: str) -> Optional[str]:
     client = get_client()
-    if client is None:
-        return None
     try:
-        # Prefer Responses API (compatibile con 2025)
         resp = client.responses.create(
-            model=model,
-            temperature=temperature,
-            max_output_tokens=max_tokens,
+            model=DEFAULT_MODEL,
+            temperature=0.3,
+            max_output_tokens=1500,
             input=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
         )
-        # Some SDK versions: resp.output_text
         if hasattr(resp, "output_text") and resp.output_text:
             return resp.output_text
-        # Fallback: parse content blocks
-        try:
-            parts = []
-            for item in getattr(resp, "output", []) or []:
-                if getattr(item, "type", None) == "message":
-                    for c in getattr(item, "content", []) or []:
-                        if c.get("type") == "output_text":
-                            parts.append(c.get("text", ""))
-            return "\n".join(parts)
-        except Exception:
-            pass
-        # Last resort: str
         return str(resp)
     except Exception as e:
         st.error(f"Errore API: {e}")
         return None
 
-
-# -----------------------------
 # Helpers
-# -----------------------------
-
 def safe_json_loads(txt: str) -> Optional[dict]:
     if not txt:
         return None
-    # Try to extract JSON code block if present
     m = re.search(r"\{[\s\S]*\}\s*$", txt)
     candidate = m.group(0) if m else txt
     try:
         return json.loads(candidate)
     except Exception:
-        # Attempt to fix trailing commas
         try:
             candidate2 = re.sub(r",(\s*[}\]])", r"\1", candidate)
             return json.loads(candidate2)
         except Exception:
             return None
-
 
 def render_output(data: dict):
     st.success("Annuncio generato ✔")
@@ -302,7 +237,6 @@ def render_output(data: dict):
     st.subheader("Annuncio completo")
     editable = st.text_area("", value=full, height=400)
 
-    # Download buttons
     st.download_button(
         label="⬇️ Scarica .txt",
         data=editable,
@@ -329,51 +263,18 @@ def render_output(data: dict):
         use_container_width=True,
     )
 
-
-# -----------------------------
 # Run
-# -----------------------------
 if submitted:
     if not title and not any([descrizione, responsabilita, qualifiche, livelli_studio]):
         st.error("Inserisci almeno il titolo o una bozza di contenuto.")
     else:
         with st.spinner("Genero l'annuncio…"):
-            sys_prompt = build_system_prompt(brand_text, language, tone_opts, add_bullets)
-            user_prompt = build_user_prompt(
-                title=title.strip(),
-                descrizione=descrizione.strip(),
-                responsabilita=responsabilita.strip(),
-                qualifiche=qualifiche.strip(),
-                livelli_studio=livelli_studio.strip(),
-                include_benefits=include_benefits.strip(),
-                location=location.strip(),
-                contract=contract.strip(),
-            )
-            raw = call_openai(
-                system_prompt=sys_prompt,
-                user_prompt=user_prompt,
-                model=DEFAULT_MODEL,
-                temperature=temperature,
-                max_tokens=int(max_tokens),
-            )
+            sys_prompt = build_system_prompt(brand_text, tone_opts, add_bullets)
+            user_prompt = build_user_prompt(title, descrizione, responsabilita, qualifiche, livelli_studio, include_benefits, location, contract)
+            raw = call_openai(sys_prompt, user_prompt)
             if not raw:
                 st.error("Nessuna risposta dal modello.")
             else:
                 data = safe_json_loads(raw)
                 if not data:
                     st.warning("La risposta non era JSON valido. Mostro il testo grezzo qui sotto.")
-                    st.text_area("Risposta grezza", value=raw, height=300)
-                else:
-                    # Inject optional location/contract if provided but missing
-                    dettagli = data.get("dettagli") or {}
-                    if location and not dettagli.get("sede"):
-                        dettagli["sede"] = location
-                    if contract and not dettagli.get("contratto"):
-                        dettagli["contratto"] = contract
-                    data["dettagli"] = dettagli
-                    render_output(data)
-
-st.markdown("""
----
-**Note privacy e conformità:** non inserire dati personali identificativi nei campi di input. L'app aiuta l'editing; la responsabilità editoriale finale resta al recruiter.
-""")
