@@ -6,13 +6,7 @@ from typing import Optional
 
 import streamlit as st
 
-# Optional web-scrape for brand voice
-try:
-    import requests
-    from bs4 import BeautifulSoup
-except Exception:
-    requests = None
-    BeautifulSoup = None
+# (Rimosso scraping: il tone of voice arriva da SECRET o fallback)
 
 # -----------------------------
 # App Config
@@ -58,51 +52,21 @@ with col_t1:
 with col_t2:
     max_tokens = st.number_input("Max token output", min_value=256, max_value=4000, value=1500, step=50)
 
-language = st.sidebar.selectbox("Lingua output", ["Italiano", "English"], index=0)
+language = "Italiano"  # fisso: solo IT
 
-st.sidebar.markdown("---")
+# Tone of voice fisso lato backend: via Secret o fallback costante
+BRAND_VOICE_FALLBACK = """
+[INSERISCI QUI un estratto rappresentativo del tone of voice di Randstad, 200–1500 parole.]
+""".strip()
 
-# Brand voice source (URL or pasted text)
-st.sidebar.subheader("Tone of Voice del brand")
-brand_source = st.sidebar.radio(
-    "Sorgente",
-    ["URL della pagina 'Chi siamo'", "Incolla testo brand voice"],
-    index=0,
-)
-brand_text: Optional[str] = None
+brand_text = None
+try:
+    brand_text = (st.secrets.get("BRAND_VOICE") or "").strip()
+except Exception:
+    brand_text = None
 
-if brand_source == "URL della pagina 'Chi siamo'":
-    default_url = "https://www.randstad.it/chi-siamo/"  # Modificabile
-    brand_url = st.sidebar.text_input("URL", value=default_url)
-    if st.sidebar.button("Recupera contenuto", use_container_width=True):
-        if not requests or not BeautifulSoup:
-            st.sidebar.error("Requests/BeautifulSoup non disponibili. Aggiungi 'requests' e 'beautifulsoup4' a requirements.txt")
-        else:
-            try:
-                resp = requests.get(brand_url, timeout=15)
-                resp.raise_for_status()
-                soup = BeautifulSoup(resp.text, "html.parser")
-                # estrai testo leggibile
-                for tag in soup(["script", "style", "noscript", "svg", "form", "nav", "footer", "header"]):
-                    tag.decompose()
-                page_text = re.sub(r"\s+", " ", soup.get_text(" ").strip())
-                brand_text = page_text[:8000]  # limite prudente
-                st.session_state["brand_text_cached"] = brand_text
-                st.sidebar.success("Contenuto recuperato ✔")
-            except Exception as e:
-                st.sidebar.error(f"Errore nel recupero: {e}")
-else:
-    brand_text = st.sidebar.text_area(
-        "Incolla un estratto rappresentativo (200–1500 parole)",
-        height=180,
-        placeholder="Incolla qui il testo che rappresenta il tono di voce del brand…",
-    )
-    if brand_text:
-        st.session_state["brand_text_cached"] = brand_text
-
-# fallback a cache
 if not brand_text:
-    brand_text = st.session_state.get("brand_text_cached")
+    brand_text = BRAND_VOICE_FALLBACK
 
 # -----------------------------
 # Input form
