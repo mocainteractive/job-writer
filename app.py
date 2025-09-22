@@ -59,7 +59,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.markdown("""
-Incolla una **bozza unica** (anche disordinata). L'AI la ripulisce e restituisce **solo** questi campi, pronti da copiare nel CMS:
+Inserisci qui tutte le informazioni relative all'offerta di lavoro. L'Intelligenza Artificiale genererà per te i campi pronti da copia:
 
 **DESCRIZIONE GENERALE • RESPONSABILITÀ • QUALIFICHE • LIVELLO DI STUDIO**
 """)
