@@ -299,12 +299,7 @@ def render_output(data: dict):
             md_export += f"- **Contratto:** {dettagli['contratto']}\\n"
     md_export += "\\n\\n---\\n\\n" + editable
 
-    st.download_button(
-        label="⬇️ Scarica .md",
-        data=md_export,
-        file_name=f"annuncio_{re.sub(r'[^a-zA-Z0-9]+', '_', titolo.lower())}.md",
-        mime="text/markdown",
-        use_container_width=True,
+
     )
 
 # -----------------------------
