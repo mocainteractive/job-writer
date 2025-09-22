@@ -85,6 +85,7 @@ Operiamo in modo etico, nel rispetto delle leggi, dei diritti umani, della priva
 # =============================
 with st.form("single_input_form", clear_on_submit=False):
     raw_blob = st.text_area(
+        "Testo annuncio (bozza)",
         height=220,
         placeholder="Incolla qui appunti/email/vecchio annuncio: azienda, sede, responsabilità principali, requisiti, titoli di studio…",
         label_visibility="visible",
