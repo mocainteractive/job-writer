@@ -59,6 +59,15 @@ h1, h2, h3, h4 {
 </style>
 """, unsafe_allow_html=True)
 
+/* Contenitore principale più compatto */
+.block-container {
+    max-width: 900px;   /* larghezza massima */
+    margin: 0 auto;     /* centrato */
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+}
+
+
 # -----------------------------
 # Header con loghi
 # -----------------------------
