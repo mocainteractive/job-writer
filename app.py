@@ -30,7 +30,7 @@ h1, h2, h3, h4 {
     color: #001C54;
 }
 
-/* Contenitore principale più compatto */
+/* Contenitore principale compatto */
 .block-container {
     max-width: 1200px;
     margin: 0 auto;
@@ -38,21 +38,18 @@ h1, h2, h3, h4 {
     padding-bottom: 2rem;
 }
 
-/* Pulsante Genera annuncio */
+/* Pulsante principale */
 .stButton > button {
-    background-color: #4D91E1 !important;
+    background-color: #0057B8 !important;
     color: white !important;
-    border: none !important;
     border-radius: 6px !important;
-    padding: 0.7em 1.4em !important;
+    padding: 0.6em 1.2em !important;
     font-size: 1.1em !important;
     font-weight: 600 !important;
-    cursor: pointer !important;
-    transition: background-color 0.2s ease-in-out !important;
+    border: none !important;
 }
 .stButton > button:hover {
-    background-color: #3C75B5 !important;
-    color: white !important;
+    background-color: #004494 !important;
 }
 
 /* Input box e textarea */
@@ -61,18 +58,6 @@ h1, h2, h3, h4 {
     border: 1px solid #d9d9d9 !important;
     padding: 0.6em !important;
     background-color: #ffffff !important;
-    font-size: 0.95em !important;
-}
-
-/* Multiselect */
-.stMultiSelect div[data-baseweb="select"] {
-    border-radius: 6px !important;
-    border: 1px solid #d9d9d9 !important;
-}
-
-/* Checkbox */
-.stCheckbox label {
-    font-size: 0.95em !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -103,11 +88,17 @@ OPENAI_API_KEY = st.secrets.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
 if not OPENAI_API_KEY:
     st.warning("⚠️ Imposta la variabile d'ambiente OPENAI_API_KEY o aggiungi st.secrets['OPENAI_API_KEY'].")
 
-# Language fisso
-language = "Italiano"
+language = "Italiano"  # fisso
 
-# Tone of voice fisso lato backend
-BRAND_VOICE_FALLBACK = """... (testo lungo tone of voice Randstad che già hai) ...""".strip()
+# -----------------------------
+# Tone of voice Randstad
+# -----------------------------
+BRAND_VOICE_FALLBACK = """
+siamo randstad, il tuo partner nel mondo del lavoro.
+Siamo la talent company leader al mondo e siamo al tuo fianco per affrontare, insieme, le sfide del mondo del lavoro. #partnerfortalent.
+[...] (testo brand voice intero come da versione precedente) [...]
+""".strip()
+
 brand_text = BRAND_VOICE_FALLBACK
 
 # -----------------------------
@@ -119,11 +110,11 @@ with st.form("job_form", clear_on_submit=False):
 
     col1, col2 = st.columns(2)
     with col1:
-        descrizione = st.text_area("Descrizione generale (bozza)", height=180)
-        responsabilita = st.text_area("Responsabilità (bozza)", height=220)
+        descrizione = st.text_area("Descrizione generale (bozza)", height=180, placeholder="Scrivi in libertà: contesto dell'azienda, sede, finalità del ruolo…")
+        responsabilita = st.text_area("Responsabilità (bozza)", height=220, placeholder="Elenca le attività principali, anche in forma grezza…")
     with col2:
-        qualifiche = st.text_area("Qualifiche (bozza)", height=220)
-        livelli_studio = st.text_area("Livelli di studio (bozza)", height=120)
+        qualifiche = st.text_area("Qualifiche (bozza)", height=220, placeholder="Competenze hard/soft, anni di esperienza, lingue, tool…")
+        livelli_studio = st.text_area("Livelli di studio (bozza)", height=120, placeholder="Diploma/laurea, indirizzo, certificazioni…")
 
     st.subheader("2) Preferenze di stile (opzionali)")
     tone_opts = st.multiselect(
@@ -132,7 +123,7 @@ with st.form("job_form", clear_on_submit=False):
         default=["chiaro", "inclusivo", "concreto"],
     )
     add_bullets = st.checkbox("Usa elenchi puntati dove utile", value=True)
-    include_benefits = st.text_area("Vantaggi/benefit (opzionale)")
+    include_benefits = st.text_area("Vantaggi/benefit (opzionale)", placeholder="Ticket, welfare, formazione, smart working…")
     location = st.text_input("Sede (opzionale)")
     contract = st.text_input("Contratto (opzionale)", placeholder="es. Tempo indeterminato, CCNL Metalmeccanico…")
 
@@ -145,28 +136,56 @@ def build_system_prompt(brand_text: Optional[str], tone_opts: list[str], add_bul
     tone_flags = ", ".join(tone_opts) if tone_opts else "chiaro, professionale"
     bullets_rule = "Usa elenchi puntati dove appropriato." if add_bullets else "Evita elenchi puntati se non indispensabili."
     brand_section = f"\nContesto tone of voice (estratto sito):\n---\n{brand_text}\n---\n"
+
     return textwrap.dedent(f"""
     Sei un senior recruiter Randstad che redige annunci impeccabili in Italiano. Scrivi in modo {tone_flags}, inclusivo e conforme alle buone pratiche HR italiane.
+
     Obiettivi:
     - Migliorare chiarezza, impatto e leggibilità.
     - Uniformare stile e terminologia al tone of voice del brand.
-    - Evitare qualsiasi discriminazione.
+    - Correggere errori, ridondanze e ambiguità, mantenendo la veridicità delle informazioni.
+    - Evitare qualsiasi discriminazione (età, genere, etnia, orientamento, stato civile, ecc.).
+    - Evidenziare elementi chiave: responsabilità, requisiti, crescita, benefit, luogo e contratto se presenti.
     {bullets_rule}
-    Output richiesto in JSON valido con le chiavi: titolo, abstract, responsabilita, qualifiche, livelli_studio, benefit, dettagli, annuncio_completo.
+
+    Linee guida:
+    - Titolo breve (max ~70 caratteri), concreto e inclusivo.
+    - Paragrafi concisi (2-4 frasi) e/o elenchi per scansionabilità.
+    - Evita gergo interno, acronimi non spiegati, superlativi vuoti.
+    - Preferisci verbi attivi ("gestirai", "collaborerai", "implementerai").
+    - Aggiungi una call-to-action breve e chiara.
+
+    IMPORTANTE: restituisci solo JSON valido, senza racchiuderlo in ``` né aggiungere testo extra.
+
+    Output richiesto in JSON valido con le chiavi:
+    {{
+      "titolo": string,
+      "abstract": string,
+      "responsabilita": [string, ...],
+      "qualifiche": [string, ...],
+      "livelli_studio": [string, ...],
+      "benefit": [string, ...],
+      "dettagli": {{"sede": string, "contratto": string}},
+      "annuncio_completo": string
+    }}
+
     {brand_section}
     """)
 
-def build_user_prompt(title, descrizione, responsabilita, qualifiche, livelli_studio, include_benefits, location, contract) -> str:
+def build_user_prompt(title: str, descrizione: str, responsabilita: str, qualifiche: str, livelli_studio: str, include_benefits: str, location: str, contract: str) -> str:
     return textwrap.dedent(f"""
-    Dati di input del recruiter:
+    Dati di input grezzi del recruiter:
     - Titolo: {title}
-    - Descrizione: {descrizione}
-    - Responsabilità: {responsabilita}
-    - Qualifiche: {qualifiche}
-    - Livelli di studio: {livelli_studio}
-    - Benefit: {include_benefits}
-    - Sede: {location}
-    - Contratto: {contract}
+    - Descrizione generale (bozza):\n{descrizione}
+    - Responsabilità (bozza):\n{responsabilita}
+    - Qualifiche (bozza):\n{qualifiche}
+    - Livelli di studio (bozza):\n{livelli_studio}
+    - Benefit extra (opzionali):\n{include_benefits}
+    - Sede (opzionale): {location}
+    - Contratto (opzionale): {contract}
+
+    Istruzioni: arricchisci e normalizza le informazioni in modo realistico ma senza inventare dettagli non forniti; 
+    se una sezione è assente, lascia il campo vuoto o suggerisci placeholder tra parentesi quadre.
     """)
 
 # -----------------------------
@@ -187,7 +206,10 @@ def call_openai(system_prompt: str, user_prompt: str) -> Optional[str]:
             model=DEFAULT_MODEL,
             temperature=0.3,
             max_output_tokens=1500,
-            input=[{"role": "system", "content": system_prompt},{"role": "user", "content": user_prompt}],
+            input=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
+            ],
         )
         if hasattr(resp, "output_text") and resp.output_text:
             return resp.output_text
@@ -202,6 +224,11 @@ def call_openai(system_prompt: str, user_prompt: str) -> Optional[str]:
 def safe_json_loads(txt: str) -> Optional[dict]:
     if not txt:
         return None
+
+    # Rimuove eventuali blocchi ```json ... ```
+    txt = re.sub(r"^```[a-zA-Z]*\n?", "", txt.strip())
+    txt = re.sub(r"```$", "", txt.strip())
+
     m = re.search(r"\{[\s\S]*\}\s*$", txt)
     candidate = m.group(0) if m else txt
     try:
@@ -215,12 +242,70 @@ def safe_json_loads(txt: str) -> Optional[dict]:
 
 def render_output(data: dict):
     st.success("Annuncio generato ✔")
+
     titolo = data.get("titolo") or "(Titolo mancante)"
     abstract = data.get("abstract") or ""
+    responsabilita = data.get("responsabilita") or []
+    qualifiche = data.get("qualifiche") or []
+    livelli = data.get("livelli_studio") or []
+    benefit = data.get("benefit") or []
+    dettagli = data.get("dettagli") or {}
+    full = data.get("annuncio_completo") or ""
+
     st.header(titolo)
     st.write(abstract)
+
+    cols = st.columns(2)
+    with cols[0]:
+        st.subheader("Responsabilità")
+        for item in responsabilita:
+            st.markdown(f"- {item}")
+        st.subheader("Qualifiche")
+        for item in qualifiche:
+            st.markdown(f"- {item}")
+    with cols[1]:
+        st.subheader("Livelli di studio")
+        for item in livelli:
+            st.markdown(f"- {item}")
+        if benefit:
+            st.subheader("Benefit")
+            for item in benefit:
+                st.markdown(f"- {item}")
+        if dettagli:
+            st.subheader("Dettagli")
+            sede = dettagli.get("sede") or ""
+            contratto = dettagli.get("contratto") or ""
+            st.markdown(f"**Sede:** {sede}")
+            st.markdown(f"**Contratto:** {contratto}")
+
     st.subheader("Annuncio completo")
-    st.text_area("", value=data.get("annuncio_completo") or "", height=400)
+    editable = st.text_area("", value=full, height=400)
+
+    st.download_button(
+        label="⬇️ Scarica .txt",
+        data=editable,
+        file_name=f"annuncio_{re.sub(r'[^a-zA-Z0-9]+', '_', titolo.lower())}.txt",
+        mime="text/plain",
+        use_container_width=True,
+    )
+    md_export = f"# {titolo}\\n\\n{abstract}\\n\\n## Responsabilità\\n" + "\\n".join([f"- {x}" for x in responsabilita]) + "\\n\\n## Qualifiche\\n" + "\\n".join([f"- {x}" for x in qualifiche]) + "\\n\\n## Livelli di studio\\n" + "\\n".join([f"- {x}" for x in livelli])
+    if benefit:
+        md_export += "\\n\\n## Benefit\\n" + "\\n".join([f"- {x}" for x in benefit])
+    if dettagli:
+        md_export += "\\n\\n## Dettagli\\n"
+        if dettagli.get("sede"):
+            md_export += f"- **Sede:** {dettagli['sede']}\\n"
+        if dettagli.get("contratto"):
+            md_export += f"- **Contratto:** {dettagli['contratto']}\\n"
+    md_export += "\\n\\n---\\n\\n" + editable
+
+    st.download_button(
+        label="⬇️ Scarica .md",
+        data=md_export,
+        file_name=f"annuncio_{re.sub(r'[^a-zA-Z0-9]+', '_', titolo.lower())}.md",
+        mime="text/markdown",
+        use_container_width=True,
+    )
 
 # -----------------------------
 # Run
@@ -233,14 +318,23 @@ if submitted:
             sys_prompt = build_system_prompt(brand_text, tone_opts, add_bullets)
             user_prompt = build_user_prompt(title, descrizione, responsabilita, qualifiche, livelli_studio, include_benefits, location, contract)
             raw = call_openai(sys_prompt, user_prompt)
-            if raw:
+            if not raw:
+                st.error("Nessuna risposta dal modello.")
+            else:
                 data = safe_json_loads(raw)
-                if data:
-                    render_output(data)
-                else:
-                    st.warning("La risposta non era JSON valido.")
+                if not data:
+                    st.warning("La risposta non era JSON valido. Mostro il testo grezzo qui sotto.")
                     st.text_area("Risposta grezza", value=raw, height=300)
+                else:
+                    dettagli = data.get("dettagli") or {}
+                    if location and not dettagli.get("sede"):
+                        dettagli["sede"] = location
+                    if contract and not dettagli.get("contratto"):
+                        dettagli["contratto"] = contract
+                    data["dettagli"] = dettagli
+                    render_output(data)
 
-st.markdown("""---  
-**Note privacy e conformità:** non inserire dati personali identificativi nei campi di input.  
+st.markdown("""
+---
+**Note privacy e conformità:** non inserire dati personali identificativi nei campi di input. L'app aiuta l'editing; la responsabilità editoriale finale resta al recruiter.
 """)
