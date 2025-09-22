@@ -208,7 +208,7 @@ def safe_json_loads(txt: str) -> Optional[dict]:
             return None
 
 # =============================
-# UI render (niente box duplicati)
+# UI render (tutto testo, niente textarea duplicate)
 # =============================
 def render_output(data: dict):
     st.success("Annuncio generato ✔")
@@ -218,15 +218,9 @@ def render_output(data: dict):
     qualifiche = data.get("qualifiche") or []
     livello_di_studio = data.get("livello_di_studio") or []
 
-    # DESCRIZIONE GENERALE (editabile)
+    # DESCRIZIONE GENERALE (TESTO, niente box)
     st.subheader("DESCRIZIONE GENERALE")
-    st.text_area(
-        "",
-        value=descrizione_generale,
-        height=220,
-        key="dg",
-        help="Testo discorsivo (3–6 frasi)."
-    )
+    st.markdown(descrizione_generale)
 
     # RESPONSABILITÀ (solo elenco)
     st.subheader("RESPONSABILITÀ")
