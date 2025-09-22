@@ -85,10 +85,10 @@ Operiamo in modo etico, nel rispetto delle leggi, dei diritti umani, della priva
 # =============================
 with st.form("single_input_form", clear_on_submit=False):
     raw_blob = st.text_area(
-        "Testo annuncio (bozza)",
+        label="",  # niente testo
         height=220,
-        placeholder="Incolla qui appunti/email/vecchio annuncio: azienda, sede, responsabilità principali, requisiti, titoli di studio…",
-        label_visibility="visible",
+        placeholder="Incolla qui appunti/email/vecchio annuncio: azienda, sede, responsabilità, requisiti, titoli di studio…",
+        label_visibility="collapsed",  # nasconde anche lo spazio dell'etichetta
     )
 
     st.subheader("Preferenze di stile (opzionali)")
@@ -100,6 +100,7 @@ with st.form("single_input_form", clear_on_submit=False):
     st.caption("Le sfumature servono solo a rifinire la resa; i campi di output restano 4 e invariati.")
 
     submitted = st.form_submit_button("🚀 Genera annuncio", use_container_width=True)
+
 
 # =============================
 # Prompt engineering
