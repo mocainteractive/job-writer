@@ -297,7 +297,7 @@ def render_output(data: dict):
             md_export += f"- **Sede:** {dettagli['sede']}\\n"
         if dettagli.get("contratto"):
             md_export += f"- **Contratto:** {dettagli['contratto']}\\n"
-    md_export += "\\n\\n---\\n\\n" + editable
+    md_export += "\\n\\n---\\n\\n" + editable,
 
 
     )
