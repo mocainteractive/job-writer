@@ -56,7 +56,26 @@ language = "Italiano"  # fisso: solo IT
 
 # Tone of voice fisso lato backend: via Secret o fallback costante
 BRAND_VOICE_FALLBACK = """
-[INSERISCI QUI un estratto rappresentativo del tone of voice di Randstad, 200–1500 parole.]
+siamo randstad, il tuo partner nel mondo del lavoro.
+Siamo la talent company leader al mondo e siamo al tuo fianco per affrontare, insieme, le sfide del mondo del lavoro. #partnerfortalent.
+Grazie alla nostra profonda conoscenza del mercato del lavoro, aiutiamo i talenti a costruire una carriera professionale rilevante e supportiamo le aziende nella creazione di un team qualificato e diversificato. Grazie all’attività dei nostri professionisti, uniamo le aspettative di chi cerca e di chi offre lavoro creando solidi rapporti di fiducia che definiscono storie, opportunità e prospettive sempre nuove.
+a nostra strategia e i nostri valori guidano la nostra crescita.
+Aspiriamo ad essere la talent company più equa e specializzata al mondo. Ci impegniamo a mantenere una cultura equa, guidata dai valori fondamentali che ci contraddistinguono fin dalla nostra nascita.servizi complementari e interlocutore unico
+Offriamo servizi complementari e un interlocutore unico per garantire continuità, risposte tempestive e un’approfondita conoscenza. L'uniformità dei nostri processi di selezione e gestione del candidato, comuni in tutto il territorio, ci permettono di reclutare i migliori profili presenti sul mercato. La nostra strategia Partner for Talent garantisce ai talenti il supporto mirato che richiedono e ai clienti le competenze specializzate e l'esperienza di cui il loro business ha bisogno. I nostri valori fondamentali fungono da bussola per tutti in Randstad, guidando il nostro comportamento e rappresentando il fondamento della nostra cultura. Su questi valori, basiamo il nostro continuo successo e la nostra reputazione di integrità, servizio e professionalità. Dobbiamo il nostro successo all’eccellenza del servizio prestato, che offre ben più dei requisiti fondamentali del nostro settore.
+
+svolgiamo il nostro lavoro in modo corretto ed etico, evitando situazioni che potrebbero creare conflitto di interessi, o l’insorgere di conflitti, tra interessi dell’impresa e interessi privati.
+non mettiamo in atto condotte di corruzione attiva o passiva, né offre o fa regali o altre utilità che potrebbero creare un condizionamento indebito o configurarsi come un comportamento inappropriato.
+non offriamo o accettiamo regali, ospitalità o altre utilità che potrebbero creare un condizionamento indebito o configurarsi come un comportamento inappropriato. Siamo rispettosi. Diamo importanza alle nostre relazioni e trattiamo bene le persone.
+
+trattiamo gli altri in modo imparziale, agisce con attenzione e considerazione e rispetto dei diritti umani. Non sono tollerate intimidazioni né molestie di alcun tipo.
+rispettiamo il diritto alla privacy, assicura che le informazioni riservate siano mantenute tali e non fa un uso improprio delle informazioni riservate di altri.
+non usiamo impropriamente i beni aziendali, inclusi hardware, software, sistemi e banche dati, per fini personali."
+Noi siamo gli esperti. Conosciamo i nostri clienti, i nostri candidati, i nostri fornitori, gli altri partner commerciali e la nostra attività. Spesso nella nostra attività sono i dettagli che contano di più.
+
+conosciamo e rispettiamo i principi internazionali dei diritti umani, le leggi che governano la propria attività nonché le policy e le procedure interne del Gruppo.
+conosciamo e rispettiamo le norme a tutela della concorrenza e antitrust.
+conosciamo e rispettiamo le leggi sull’insider trading e sull’abuso di mercato dei titoli azionari o obbligazionari di Randstad.
+assicuriamo che i nostri archivi (compresi quelli che contengono informazioni personali) vengano creati, usati, conservati e distrutti in conformità alla legge.
 """.strip()
 
 brand_text = None
