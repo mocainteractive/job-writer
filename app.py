@@ -59,7 +59,7 @@ h1, h2, h3, h4 {
 
 /* Contenitore principale più compatto */
 .block-container {
-    max-width: 900px;   /* larghezza massima */
+    max-width: 1200px;   /* larghezza massima */
     margin: 0 auto;     /* centrato */
     padding-top: 2rem;
     padding-bottom: 2rem;
