@@ -51,18 +51,17 @@ h1,h2,h3,h4 { font-weight:600; color:#001C54; }
 # Header
 # =============================
 st.markdown("""
-<div style="display:flex;align-items:center;justify-content:center;gap:40px;margin-bottom:20px;">
+<div style="display:flex;align-items:center;justify-content:center;gap:40px;margin-bottom:10px;">
   <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/10/Randstad_Logo.svg/2560px-Randstad_Logo.svg.png" alt="Randstad" style="height:40px;">
   <h1 style="margin:0;font-size:2.2em;">Job Assistant</h1>
   <img src="https://mocainteractive.com/wp-content/uploads/2025/04/cropped-moca_logo-positivo-1.png" alt="Moca" style="height:40px;">
 </div>
 """, unsafe_allow_html=True)
 
-st.markdown("""
-Inserisci qui tutte le informazioni relative all'offerta di lavoro. L'Intelligenza Artificiale genererà per te i campi pronti da copia:
-
-**DESCRIZIONE GENERALE • RESPONSABILITÀ • QUALIFICHE • LIVELLO DI STUDIO**
-""")
+st.markdown(
+    "Inserisci qui tutte le informazioni relative all'offerta di lavoro. "
+    "L'AI genererà per te i campi pronti da copiare: **DESCRIZIONE GENERALE • RESPONSABILITÀ • QUALIFICHE • LIVELLO DI STUDIO**"
+)
 
 # =============================
 # Config & brand voice
@@ -82,14 +81,14 @@ Operiamo in modo etico, nel rispetto delle leggi, dei diritti umani, della priva
 """.strip()
 
 # =============================
-# Form (un solo campo)
+# Form (input minimo, niente ripetizioni)
 # =============================
 with st.form("single_input_form", clear_on_submit=False):
-    st.subheader("Bozza unica")
     raw_blob = st.text_area(
-        "Incolla qui qualsiasi informazione sul ruolo (azienda, sede, responsabilità, requisiti, studi...). Anche in forma libera.",
+        "Testo annuncio (bozza)",
         height=220,
-        placeholder="Esempio: stiamo cercando un macchinista piega-incolla per azienda packaging a Bottanuco (BG)..."
+        placeholder="Incolla qui appunti/email/vecchio annuncio: azienda, sede, responsabilità principali, requisiti, titoli di studio…",
+        label_visibility="visible",
     )
 
     st.subheader("Preferenze di stile (opzionali)")
@@ -128,12 +127,12 @@ def build_system_prompt(brand_text: str, tone_opts: list[str]) -> str:
 
 def build_user_prompt(raw_blob: str) -> str:
     return textwrap.dedent(f"""
-    Bozza unica (grezza) da ripulire e strutturare:
+    Testo grezzo fornito dal recruiter (da ripulire e strutturare):
     ---
     {raw_blob}
     ---
 
-    Output atteso (solo queste chiavi, nell'ordine indicato):
+    Output atteso (solo queste chiavi):
     {{
       "descrizione_generale": string,
       "responsabilita": [string, ...],
@@ -156,7 +155,7 @@ def get_client():
 def call_openai(system_prompt: str, user_prompt: str) -> Optional[str]:
     client = get_client()
     try:
-        # Provo a forzare JSON nativo (SDK 2025)
+        # Provo a forzare JSON nativo
         try:
             resp = client.responses.create(
                 model=DEFAULT_MODEL,
@@ -212,25 +211,6 @@ def safe_json_loads(txt: str) -> Optional[dict]:
 # =============================
 # UI render
 # =============================
-def copy_button_js(target_query: str, btn_id: str):
-    """Rende un pulsante 'Copia' che copia il contenuto della textarea target (heuristic)."""
-    st.markdown(f"""
-    <button id="{btn_id}" style="margin-top:8px;padding:6px 10px;border:none;border-radius:6px;background:#0057B8;color:#fff;cursor:pointer;">
-      Copia testo
-    </button>
-    <script>
-      const btn = document.getElementById("{btn_id}");
-      btn.onclick = () => {{
-        const ta = window.parent.document.querySelector('{target_query}');
-        if (ta) {{
-          navigator.clipboard.writeText(ta.value || ta.innerText || "");
-          btn.innerText = 'Copiato ✔';
-          setTimeout(()=>btn.innerText='Copia testo',1200);
-        }}
-      }};
-    </script>
-    """, unsafe_allow_html=True)
-
 def render_output(data: dict):
     st.success("Annuncio generato ✔")
 
@@ -241,41 +221,32 @@ def render_output(data: dict):
 
     # DESCRIZIONE GENERALE (editabile)
     st.subheader("DESCRIZIONE GENERALE")
-    dg = st.text_area("",
-        value=descrizione_generale,
-        height=220,
-        key="dg",
-        help="Testo discorsivo (3–6 frasi)."
-    )
-    copy_button_js('textarea[aria-label=""]', "copy-dg")
+    st.text_area("", value=descrizione_generale, height=220, key="dg", help="Testo discorsivo (3–6 frasi).")
 
     # RESPONSABILITÀ
-    st.subheader("RESPONSABILITÀ", anchor=False)
-    for idx, item in enumerate(responsabilita):
-        st.markdown(f"- {item}")
-    resp_text = "\n".join([f"- {x}" for x in responsabilita])
-    st.text_area("Modifica elenco (uno per riga, con - opzionale):", value=resp_text, height=160, key="resp_edit")
+    st.subheader("RESPONSABILITÀ")
+    for it in responsabilita:
+        st.markdown(f"- {it}")
+    st.text_area("Modifica elenco (uno per riga):", value="\n".join(responsabilita), height=160, key="resp_edit")
 
     # QUALIFICHE
-    st.subheader("QUALIFICHE", anchor=False)
-    for idx, item in enumerate(qualifiche):
-        st.markdown(f"- {item}")
-    qual_text = "\n".join([f"- {x}" for x in qualifiche])
-    st.text_area("Modifica elenco (uno per riga, con - opzionale):", value=qual_text, height=160, key="qual_edit")
+    st.subheader("QUALIFICHE")
+    for it in qualifiche:
+        st.markdown(f"- {it}")
+    st.text_area("Modifica elenco (uno per riga):", value="\n".join(qualifiche), height=160, key="qual_edit")
 
     # LIVELLO DI STUDIO
-    st.subheader("LIVELLO DI STUDIO", anchor=False)
-    for idx, item in enumerate(livello_di_studio):
-        st.markdown(f"- {item}")
-    ls_text = "\n".join([f"- {x}" for x in livello_di_studio])
-    st.text_area("Modifica elenco (uno per riga, con - opzionale):", value=ls_text, height=120, key="ls_edit")
+    st.subheader("LIVELLO DI STUDIO")
+    for it in livello_di_studio:
+        st.markdown(f"- {it}")
+    st.text_area("Modifica elenco (uno per riga):", value="\n".join(livello_di_studio), height=120, key="ls_edit")
 
 # =============================
 # Run
 # =============================
 if submitted:
     if not raw_blob.strip():
-        st.error("Incolla almeno qualche riga nella bozza.")
+        st.error("Inserisci almeno qualche riga di bozza.")
     else:
         with st.spinner("Genero l'annuncio…"):
             sys_prompt = build_system_prompt(BRAND_VOICE, tone_opts)
