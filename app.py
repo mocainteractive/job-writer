@@ -65,6 +65,30 @@ h1, h2, h3, h4 {
     padding-bottom: 2rem;
 }
 
+/* Pulsante principale */
+.stButton > button {
+    background-color: #0057B8;
+    color: white;
+    border-radius: 6px;
+    padding: 0.6em 1.2em;
+    font-size: 1.1em;
+    font-weight: 600;
+    border: none;
+}
+.stButton > button:hover {
+    background-color: #004494;
+}
+
+/* Input box e textarea */
+.stTextInput input, .stTextArea textarea {
+    border-radius: 6px;
+    border: 1px solid #d9d9d9;
+    padding: 0.6em;
+    background-color: #ffffff;
+}
+
+
+
 </style>
 """, unsafe_allow_html=True)
 
